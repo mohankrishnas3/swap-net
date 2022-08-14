@@ -6,7 +6,11 @@ import time
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 import tensorflow.python.debug as tf_debug
-from data import batch_reader
+
+sys.path.insert(1, '/home/mk/Downloads/swap-net-master/swap-net-summer/data')
+
+
+import read_batcher
 from model import seq2seq_attention_model
 
 import random
@@ -142,9 +146,9 @@ def run_training(model, batcher,re_vocab,embed, sess_context_manager, sv, summar
         tf.logging.info('train_step: %d', train_step) 
         tf.logging.info('loss: %f', loss)
 
-	tf.logging.info('step_loss: %f word_loss: %f ,sent_loss: %f ,word_loss_null: %f,sent_loss_null: %f ,switch_loss: %f',step_loss,word_loss,sent_loss,word_loss_null,sent_loss_null,switch_loss)
+  tf.logging.info('step_loss: %f word_loss: %f ,sent_loss: %f ,word_loss_null: %f,sent_loss_null: %f ,switch_loss: %f',step_loss,word_loss,sent_loss,word_loss_null,sent_loss_null,switch_loss)
 
-        summary_writer.flush()
+  summary_writer.flush()
 
 
 
@@ -200,7 +204,7 @@ def main(unused_argv):
   tf.set_random_seed(111) # a seed value for randomness
 
   if hps.mode == 'train':
-    print "creating model..."
+    print("creating model...")
 
     model = seq2seq_attention_model.Seq2SeqAttentionModel(
 				hps, vocab, num_gpus=1)

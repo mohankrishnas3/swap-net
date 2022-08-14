@@ -7,6 +7,14 @@ import collections
 import tensorflow as tf
 from tensorflow.core.example import example_pb2
 
+# some_file.py
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.insert(1, '/home/mk/Downloads/swap-net-master/swap-net-summer/RAKE-tutorial-master')
+sys.path.insert(1, '/home/mk/Downloads/swap-net-master/swap-net-summer/gensim-develop')
+sys.path.insert(1, '/home/mk/Downloads/swap-net-master/swap-net-summer/')
+
+
 import rake
 import gensim
 import re
@@ -82,24 +90,24 @@ def chunk_all():
   # Chunk the data
   for set_name in ['train', 'val', 'test']:
   #for set_name in [ 'test']:
-    print "Splitting %s data into chunks..." % set_name
+    print ("Splitting %s data into chunks...",set_name)
     chunk_file(set_name)
-  print "Saved chunked data in %s" % chunks_dir
+  print("Saved chunked data in %s",chunks_dir)
 
 
 def tokenize_stories(stories_dir, tokenized_stories_dir):
   """Maps a whole directory of .story files to a tokenized version using Stanford CoreNLP Tokenizer"""
-  print "Preparing to tokenize %s to %s..." % (stories_dir, tokenized_stories_dir)
+  print ("Preparing to tokenize",stories_dir," to ",tokenized_stories_dir)
   stories = os.listdir(stories_dir)
   # make IO list file
-  print "Making list of files to tokenize..."
+  print("Making list of files to tokenize...")
   with open("mapping.txt", "w") as f:
     for s in stories:
       f.write("%s \t %s\n" % (os.path.join(stories_dir, s), os.path.join(tokenized_stories_dir, s)))
   command = ['java', 'edu.stanford.nlp.process.PTBTokenizer', '-ioFileList', '-preserveLines', 'mapping.txt']
-  print "Tokenizing %i files in %s and saving in %s..." % (len(stories), stories_dir, tokenized_stories_dir)
+  print("Tokenizing", len(stories)," files in", stories_dir, " and saving in", tokenized_stories_dir)
   subprocess.call(command)
-  print "Stanford CoreNLP Tokenizer has finished."
+  print("Stanford CoreNLP Tokenizer has finished.")
   os.remove("mapping.txt")
 
   # Check that the tokenized stories directory contains the same number of files as the original directory
@@ -107,7 +115,7 @@ def tokenize_stories(stories_dir, tokenized_stories_dir):
   num_tokenized = len(os.listdir(tokenized_stories_dir))
 #  if num_orig != num_tokenized:
 #    raise Exception("The tokenized stories directory %s contains %i files, but it should contain the same number as %s (which has %i files). Was there an error during tokenization?" % (tokenized_stories_dir, num_tokenized, stories_dir, num_orig))
-  print "Successfully finished tokenizing %s to %s.\n" % (stories_dir, tokenized_stories_dir)
+  print("Successfully finished tokenizing ",stories_dir," to tokenized_stories_dir.\n")
 
 
 def read_text_file(text_file):
@@ -156,11 +164,15 @@ def prepare_key_vocab():
     with open(vocabulary_path, mode="wb") as vocab_file:
       for w in vocab:
         
-        vocab_file.write(w + b"\n")
+                
+        w = bytes(str(w), 'utf-8') # modified
+        #print(w)
+        vocab_file.write((w + b"\n"))
 
     with open(keyword_path, mode="wb") as key_file:
       for w in key:
-
+        
+        w = bytes(str(w), 'utf-8') # modified
         key_file.write(w + b"\n")
     #vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
     return key
@@ -207,6 +219,8 @@ def get_everything(story_file,key):
     line = line.strip().lower().split()
     sent_label.append(line[-1])
     sent_one=' '.join(line[:-1])
+
+    sent_one = bytes(sent_one, 'utf-8') # modified
     sent_one=_DIGIT_RE.sub(b" 0",sent_one)
     #article_lines.append(' '.join(line[:-1]))
     article_lines.append(sent_one)
@@ -308,12 +322,18 @@ def make_vocab(data_file):
 
     article=' '.join([line for line in article_lines])
     word_extract=' '.join([line for line in word_extract_lines])
+    abstract=' '.join([line for line in abstract]) # modified
     
   #  article=SYB_RE.sub(r' ',article)
-    article=_DIGIT_RE.sub(b" 0",article)
+    print(article)
+    article = bytes(article, 'utf-8')
+    article=_DIGIT_RE.sub(b" 0",article) # modified
    # word_extract=SYB_RE.sub(r' ',word_extract)
+    word_extract = bytes(word_extract, 'utf-8') # modified
     word_extract=_DIGIT_RE.sub(b" 0 ",word_extract)
 
+    word_extract= (word_extract).decode("utf-8")  # modified
+    article= (article).decode("utf-8") # modified
     extract=extract+ ' ' +word_extract
     art_tokens=article.split(' ')
     abs_tokens= abstract.split(' ')
@@ -322,49 +342,53 @@ def make_vocab(data_file):
     tokens = [t for t in tokens if t!=""] # remove empty
     vocab_counter.update(tokens)
     
-  print "Writing vocab file..."
+  vocab_size=150000    
+  print("Writing vocab file...")
   with open(os.path.join(finished_files_dir, "vocab"), 'w') as writer:
-    for word, count in vocab_counter.most_common(VOCAB_SIZE):
+    for word, count in vocab_counter.most_common(vocab_size):
       writer.write(word + ' ' + str(count) + '\n')
-  print "Finished writing vocab file"
+  print("Finished writing vocab file")
 
-  rake_object = rake.Rake("RAKE-tutorial/SmartStoplist.txt",1,1,1)
+  rake_object = rake.Rake("/home/mk/Downloads/swap-net-master/swap-net-summer/RAKE-tutorial-master/SmartStoplist.txt",1,1,1) # modified
   rake_keywords=rake_object.run(extract)
   keys=[k[0] for k in rake_keywords if not k[0].startswith('@entity')]
  
-  keys=keys[:VOCAB_SIZE]
+  keys=keys[:vocab_size]
 
-  print "Writing keyword file..."
+  print("Writing keyword file...")
   with open(os.path.join(finished_files_dir, "keyword"), 'w') as writer:
     for word in keys:
 #      if word in set(vocab_counter.elements()):
       writer.write(word  + '\n')
-  print "Finished writing vocab file"
+  print("Finished writing vocab file")
 
 
 def get_emb_data(data_file,mode):
-  print "Getting data for embeddings"
+  print("Getting data for embeddings")
   complete_data=""
   data_list=[]
   data_list += read_text_file(data_file)
 
   with open(os.path.join(finished_files_dir, "embed_data_1.txt"), 'a') as writer:
     for idx,s in enumerate(data_list):
+      print(cnn_tokenized_stories_dir)
+      print(s)
       if os.path.isfile(os.path.join(cnn_tokenized_stories_dir, s)):
           story_file = os.path.join(cnn_tokenized_stories_dir, s)
           
       elif os.path.isfile(os.path.join(dm_tokenized_stories_dir, s)):
         story_file = os.path.join(dm_tokenized_stories_dir, s)
 
-
+      #story_file = "/home/mk/Downloads/swap-net-master/swap-net-summer/dataset/finished_files/training_list.txt"
+      #print(story_file)
       article_lines,abstract_lines,word_extract_lines=get_art_abs(story_file)
 
       
 
       article=' '.join([line for line in article_lines])
       #word_extract=' '.join([line for line in word_extract_lines])
-      #abstract=' '.join([line for line in abstract_lines])
-      abstract=abstract_lines.replace("<eos>","")
+      abstract=' '.join([line for line in abstract_lines])
+      abstract=abstract.replace("<eos>","")
       complete_data=""
       complete_data+=article
       complete_data+=abstract
@@ -375,9 +399,9 @@ def get_emb_data(data_file,mode):
 
 def get_emb_model():
   sent=gensim.models.word2vec.LineSentence(os.path.join(finished_files_dir, "embed_data_1.txt"))
-  model=gensim.models.Word2Vec(sent,size=100, window=6,min_count=2,negative=10)
-  print "Training embed model"
-  model.save_word2vec_format(os.path.join(finished_files_dir, "embed_model.bin"),binary=True)
+  model=gensim.models.Word2Vec(sent,vector_size=100, window=6,min_count=2,negative=10)
+  print("Training embed model")
+  model.wv.save_word2vec_format(os.path.join(finished_files_dir, "embed_model.bin"),binary=True)
 
 
 def write_to_bin(data_file, out_file,mode, makevocab=False):
@@ -399,13 +423,19 @@ def write_to_bin(data_file, out_file,mode, makevocab=False):
         story_file = os.path.join(dm_tokenized_stories_dir, s)
 	
       else:
-        print "Error: Couldn't find tokenized story file %s in either tokenized story directories %s and %s. Was there an error during tokenization?" % (s, cnn_tokenized_stories_dir, dm_tokenized_stories_dir)
+        print("Error: Couldn't find tokenized story file", s ,"in either tokenized story directories ", cnn_tokenized_stories_dir ,"and ", dm_tokenized_stories_dir,". Was there an error during tokenization?")
         # Check again if tokenized stories directories contain correct number of files
         
       article_text,sent_label_text,word_text,word_label_text,abstract_text = get_everything(story_file,key)
       #print('ab text',abstract_text)
       # Write to tf.Example
       tf_example = example_pb2.Example()
+      article_text = bytes(article_text, 'utf-8') # modified
+      sent_label_text = bytes(sent_label_text, 'utf-8') # modified
+      word_text = bytes(word_text, 'utf-8') # modified
+      word_label_text = bytes(word_label_text, 'utf-8') # modified
+      abstract_text = bytes(abstract_text, 'utf-8') # modified
+
       tf_example.features.feature['article_text'].bytes_list.value.extend([article_text])
       tf_example.features.feature['sent_label_text'].bytes_list.value.extend([sent_label_text])
       tf_example.features.feature['word_text'].bytes_list.value.extend([word_text])
@@ -429,7 +459,7 @@ def write_to_bin(data_file, out_file,mode, makevocab=False):
         tokens = [t for t in tokens if t!=""] # remove empty
         vocab_counter.update(tokens)
 
-  print "Finished writing file %s\n" % out_file
+  print("Finished writing file ", out_file,"\n")
 
 
 def initialise():
